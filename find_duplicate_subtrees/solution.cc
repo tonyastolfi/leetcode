@@ -65,50 +65,54 @@ public:
   template <typename Pre, typename In, typename Post>
   void traverse(TreeNode *root, Pre &&pre_action, In &&in_action,
                 Post &&post_action) {
+    traverseR(root, std::forward<Pre>(pre_action), std::forward<In>(in_action),
+              std::forward<Post>(post_action));
+  }
+
+  template <typename Pre, typename In, typename Post>
+  void traverseR(TreeNode *root, Pre &&pre_action, In &&in_action,
+                 Post &&post_action) {
+    pre_action(root);
+    if (root->left) {
+      traverseR(root->left, std::forward<Pre>(pre_action),
+                std::forward<In>(in_action), std::forward<Post>(post_action));
+    }
+    in_action(root);
+    if (root->right) {
+      traverseR(root->right, std::forward<Pre>(pre_action),
+                std::forward<In>(in_action), std::forward<Post>(post_action));
+    }
+    post_action(root);
+  }
+
+  template <typename Pre, typename In, typename Post>
+  void traverseI(TreeNode *root, Pre &&pre_action, In &&in_action,
+                 Post &&post_action) {
     vector<TreeNode *> stack;
     TreeNode *next = root;
     for (;;) {
-      // enter next
       do {
         pre_action(next);
         stack.push_back(next);
-        if (!next->left) {
-          if (next->right) {
-            // visit inner node with no left subtree
-            in_action(next);
-          }
-          next = next->right;
-        } else {
-          next = next->left;
-        }
+        next = next->left;
       } while (next);
 
-      // visit leaf
-      in_action(stack.back());
-
-      // advance
-      for (;;) {
-        TreeNode *const prev = stack.back();
+      for (TreeNode *prev = nullptr;;) {
+        const bool node_done = prev && stack.back()->right == prev;
+        if (!node_done) {
+          in_action(stack.back());
+          if (stack.back()->right && prev != stack.back()->right) {
+            next = stack.back()->right;
+            break;
+          }
+        }
+        prev = stack.back();
         stack.pop_back();
         post_action(prev);
         if (stack.empty()) {
           return;
         }
-        if (!stack.back()->right) {
-          // visit inner node with no right subtree
-          in_action(stack.back());
-          continue;
-        }
-        if (prev == stack.back()->left) {
-          break;
-        }
       }
-
-      // visit inner node with left and right subtrees
-      in_action(stack.back());
-
-      // process the right subtree
-      next = stack.back()->right;
     }
   }
 
